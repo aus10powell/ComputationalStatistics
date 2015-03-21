@@ -1,0 +1,174 @@
+
+ Utilizing "AptitudeTest.txt" data
+```{r,echo=TRUE}
+fileurl <- "http://www.math.sjsu.edu/~bremer/Teaching/Math267/Data/AptitudeTest.txt"
+ap_data = read.table(fileurl,header=T)
+knitr::kable(head(ap_data))   # dislpay data
+```
+
+
+### a) Report all nine test scores for the employee named “Linda” with tests in alpha- betical order.
+```{r,echo=TRUE}
+# function "test_scores" goes through data frame and looks for a string that is input
+test_scores <- function(name) {  
+  name_scores = data.frame() # intialize data frame "name_scores"
+  for (i in 1:nrow(ap_data)) {        # loop searches through each row for string input into function
+    if(ap_data$Name[i] == name){       # stores value in vector if string/name is found
+      name_scores <- data.frame( rbind(name_scores,ap_data[i,c(4:12)]) )  # "name_scores" excludes non-name columns from search
+    }
+  }
+  return(name_scores)
+}
+knitr::kable(test_scores("Linda"))
+
+```
+
+### b) Count the total number of test absences (NA entries) for all students.
+```{r,echo=TRUE}
+num_na = sum(is.na(ap_data))    # sums all values which have NA entries
+num_na
+```
+
+
+### c) Combine the information from the individual tests for each employee. 
+```{r,echo=TRUE}
+average_scores = cbind(ap_data[,c(1:3)],apply(ap_data[,c(4,5,11)],1,mean,na.rm=T),apply(ap_data[,c(6,7,9)],1,mean,na.rm=T),apply(ap_data[,c(8,10,12)],1,mean,na.rm=T))          # combines the name, gender, level, mean of verbal, quantitative and logic into columns. Ignores values of "NA". E.g. for 3 scores one of which is "NA" it computes the sum of two and divides by two. 
+names(average_scores) = c("Name","Gender","Level","aveVer","aveQua","aveLog")     # renames the columns which are averages of scores
+knitr::kable(head(average_scores))
+boxplot(average_scores[,c(4:6)],main="Boxplot for Average Scores for Verbal, Quantitative and Logic (n=174)",ylab="Score")  # plot average scores for all tests
+```
+
+### d) Create a table that compares the average scores for females and males in all three test categories.
+```{r,echo=TRUE}
+library(data.table)
+mf = data.table(average_scores)    # sets data frame: "average_scores" into table in order to search easier by string
+male_scores = mf[mf$Gender=="male"]   # searches "Gender" column for "male" string
+male_scores = as.data.frame(male_scores)   # re-sets the male data into a data frame 
+average_male_score = cbind( mean(male_scores[,4],na.rm=T),mean(male_scores[,5],na.rm=T),mean(male_scores[,6],na.rm=T))  # average "male_scores" for each catagory
+
+female_scores = mf[mf$Gender=="female"]  # searches "Gender" column for "female" string
+female_scores = as.data.frame(female_scores) # re-sets the male data into a data frame 
+average_female_score = cbind( mean(female_scores[,4],na.rm=T),mean(female_scores[,5],na.rm=T),mean(female_scores[,6],na.rm=T))# average "male_scores" for each catagory
+
+average_table = matrix(c(average_female_score[1],average_female_score[2],average_female_score[3],average_male_score[1],average_male_score[2],average_male_score[3]),ncol=3,byrow=TRUE)  # set the averages test scores of males and females into a more legible table
+
+colnames(average_table) = c("AveVerbal","AveQuantitative","AveLogic")  
+rownames(average_table) = c("Female","Male")
+
+knitr::kable(average_table)
+```
+
+### e) Average the three scores for the three individual test categories to compute a final score.
+
+```{r,echo=TRUE}
+mean(as.matrix(ap_data[,4:12]),na.rm=T) # finds the overall mean for all the students and all of the tests
+student_average_score = cbind(ap_data[,1:3],apply(ap_data[,4:12],1,mean, na.rm=T)      )    # finds the overall mean for each student over all of their tests
+names(student_average_score) = c("Name","Gender","Level","OverallAverage")   # renames columns to account for averaged overall score
+
+top_ten_students = order(student_average_score$OverallAverage,decreasing=T)[1:10]   # order the students from highest score to lowest
+knitr::kable(head(student_average_score[top_ten_students,]))
+```
+
+
+
+
+# Problem 2: Utilizing "Abalone.txt" data
+```{r,echo=TRUE}
+fileurl <- "http://www.math.sjsu.edu/~bremer/Teaching/Math267/Data/Abalone.txt"    # read data in (assuming internet connection)
+abalone = read.table(fileurl,header=T) 
+head(abalone)
+```
+
+
+### a) Create a scatterplot of the observed data with shucked weight on the x-axis and growth rings on the y-axis..
+```{r,echo=TRUE}
+plot(abalone$shucked.weight,abalone$rings,main="Abalone growth rings versus shucked weight (n=1000)",cex=.5,col="dark red")
+```
+
+
+### b) Write an R-function that accepts two vectors of observations as as input and returns a contour plot of the kernel density estimator over the range of observed data.
+```{r,echo=TRUE,fig.width=8,fig.height=5}
+fileurl <- "http://www.math.sjsu.edu/~bremer/Teaching/Math267/Data/Abalone.txt"  # read data in (assuming internet connection)
+abalone = read.table(fileurl,header=T)
+
+########## BEGIN "contour_plot"" function ########################################
+contour_plot = function(observed1, observed2) {
+   numgrid = 20                  # sets the size of the gride in each direction
+   n = length(observed1)    # provides number of observations in observed data
+   p = 2      			# dimension of observed data vectors
+   hii_observed1 = (((4/(n*(p + 2)))^(1/(p + 4)))*sd(observed1))    # creates the silverman's bandwidth for "shucked.weight" data
+   hii_observed2 = (((4/(n*(p + 2)))^(1/(p + 4)))*sd(observed2)) # creates the standard deviation from "rings" data
+   H_mtrx = matrix(c(hii_observed1,0,0,hii_observed2), ncol=2) # creating H_matrix using Silverman's
+   
+   # "sequence1" and "sequence2" set the bounderies for x-axis and y-axis and creates a training sequence. Not assuming they have been established outside of the "contour_plot" function
+   sequence1 = seq(min(observed1) - 0.1 ,max(observed1) + 0.1,length.out=numgrid )     # set grid for x-axis
+   sequence2 = seq(min(observed2) - 0.1 ,max(observed2) + 0.1,length.out=numgrid )     # set grid for y-axis
+   f_mtrx=matrix(data=NA, nrow=numgrid, ncol=numgrid)   # initializing matrix to store estimate density values
+   kernel_est = vector()  # initializing vector to store kernel values that will be summed over
+   
+   	for (i in 1:numgrid){       # loops over x-axis values
+   		for (j in 1:numgrid){   # loops over y-axis values
+   			for (k in 1:n){      # loop creates kernel values
+   				difference1 = (sequence1[i] - observed1[k])  # computes difference for the observed values for grid values in x-axis
+   				difference2 = (sequence2[j] - observed2[k]) # computes difference for the observed values for grid values in y-axis
+   				x_mtrx = solve(H_mtrx) %*% matrix(c(difference1 , difference2),nrow=p,byrow=T)   # computes 2x1 matrix to be used in kernel_est
+
+   				kernel_est[k] = (1/sqrt(2*pi)^p)*exp(-0.5*(t(x_mtrx)%*%x_mtrx))	# calculuates the kernel at for each iteration of the first two loops
+   			}
+   		f_mtrx[i,j] = (1/(n*det(H_mtrx)))*sum(kernel_est)   # stores estimated density value in matrix
+   		}
+   	}
+   filled.contour(sequence1,sequence2,f_mtrx,color = terrain.colors,main="Density plot",xlab="Shucked weight",ylab="Rings",key.title = title(main = "Density"),cex = 0.5, pch = 16)
+   points(observed1,observed2)
+}
+########## END "contour_plot"" function #########################################
+# Start the clock!
+ptm <- proc.time()   # determine how effecient my function is
+contour_plot(abalone$shucked.weight,abalone$rings)
+# Stop the clock
+proc.time() - ptm
+```
+
+
+### c) Write another R-function that, similarly to the function you created in (b), accepts two-dimensional observations and creates a contour plot for the density estimator using a two-dimensional standard Normal kernel, but this time using Scott’s rule for the bandwidth matrix H.
+```{r,echo=TRUE, fig.width=8,fig.height=5}
+fileurl <- "http://www.math.sjsu.edu/~bremer/Teaching/Math267/Data/Abalone.txt"
+abalone = read.table(fileurl,header=T)
+library(expm)
+
+########## BEGIN "contour_plot"" function ########################################
+contour_plot2 = function(observed1, observed2) {
+   numgrid = 20                  # sets the size of the gride in each direction
+   n = length(observed1)    # provides number of observations in observed data
+   p = 2      			# dimension of observed data vectors
+   
+   H_mtrx = 1/(n^(1/(p + 4)))*sqrtm(cov(matrix(c(observed1,observed2),ncol=2)))    # creating H_matrix using Scott's
+   
+   sequence1 = seq(min(observed1) - 0.1 ,max(observed1) + 0.1,length.out=numgrid )   # set grid for x-axis
+   sequence2 = seq(min(observed2) - 0.1 ,max(observed2) + 0.1,length.out=numgrid )   # set grid for y-axis
+   f_mtrx=matrix(data=NA, nrow=numgrid, ncol=numgrid)   
+   kernel_est = vector()
+   
+   	for (i in 1:numgrid){  # loops over x-axis values
+   		for (j in 1:numgrid){  # loops over y-axis values
+   			for (k in 1:n){ # loop creates kernel values
+   				difference1 = (sequence1[i] - observed1[k]) # computes difference for the observed values for grid values
+   				difference2 = (sequence2[j] - observed2[k])  # computes difference for the observed values for grid values in y-axis
+   				x_mtrx = solve(H_mtrx) %*% matrix(c(difference1 , difference2),nrow=p,byrow=T) # computes 2x1 matrix to be used in kernel_est
+   				kernel_est[k] = (1/sqrt(2*pi)^p)*exp(-0.5*(t(x_mtrx)%*%x_mtrx))	 # calculates kernel value
+   			}
+   		f_mtrx[i,j] = (1/(n*det(H_mtrx)))*sum(kernel_est) # enters kernel value for the matrix representing the the training grid
+   		}
+   	}
+   filled.contour(sequence1,sequence2,f_mtrx,color = terrain.colors,main="Density plot",xlab="Shucked weight",ylab="Rings",key.title = title(main = "Density"),cex = 0.5, pch = 16)  # plot density
+   points(observed1,observed2)       # plot data points for overlay
+}
+########## END "contour_plot2" function #########################################
+# Start the clock!
+ptm <- proc.time()   # determine how effecient my function is
+contour_plot2(abalone$shucked.weight,abalone$rings)
+# Stop the clock
+proc.time() - ptm
+
+```
+
