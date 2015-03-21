@@ -1,0 +1,86 @@
+---
+title: "Math 267 HW3"
+author: "Austin Powell"
+date: "February 12, 2015"
+output: html_document
+---
+
+## Problem 1: Epanechnikov kernel density estimator
+#### a)
+##### Epanechnikov kernel density estimator:
+After some testing, it seems like utilizing two for-loops is less expensive computationally than "outer()" combined with "Vectorize()":
+```{r,echo=TRUE}
+epanechnikov_estimate <- function(x,x0,h) {
+n     = length(x0)              # "n" stores the number of rows in the matrix
+k     = length(x)                               # "k" stores the number of columns in the matrix
+mtrx=matrix(data=NA, nrow=n, ncol=k)            # "mtrx" initializes a matrix that is n x k
+
+ptm <- proc.time()
+for(j in 1:k){                             # this loop iterates across columns  of 
+  for(i in 1:n){                   # for each column iteration, this loop iterates down the respective columns
+    x_prime = ((x0[i] - x[j])/h)             # "x_prime" stores the "bins"
+    if (abs(x_prime) <= 1){   # matrix entry receives value from Epanechnikov  function if -1 <= x <= 1  
+      mtrx[i,j] = (1/(n*h)) * (3/4)*(1 - (x_prime^2))                      
+    } else {                                  # Computes 0 if x no in -1 <= x <= 1
+      mtrx[i,j] = 0                # matrix entry receives value of 0 if x outside interval -1 <= x <= 1     
+    }
+    
+  }
+}
+
+return(mtrx)
+}
+```
+
+#### b)
+##### Training density estimate:
+```{r,echo=T}
+h<-1
+x0 <- c(3.519432,6.577169,4.043256,4.079995,3.002358,4.727704,4.684651,4.371745,4.893536,5.428015,4.222280,3.706118,4.220433,5.011952,4.847584,4.296536,6.188879,5.340512,  5.506968,  4.706695,  5.223641,  7.007201,  6.011979,  4.697541,  3.974755,  4.732615,  4.800894,  5.131123,  5.145800,  5.362065,  5.673981,  7.072036,  4.458971,  3.929508,4.627543,  4.514859,  5.274784,  4.520487,  5.798105,  3.995549, 10.209968,  7.688014, 11.156269,  6.808749,  9.382993, 10.898932,  8.045893, 10.379996, 11.462907,  9.014802,  9.914630,9.774659, 10.913654, 14.040670,  7.898220, 11.469304, 11.078499,  7.371454,  9.499923, 10.628409) # set "training" sequence
+x <- seq(min(x0) - 1 , max(x0) + 1,0.1)                                              # set range to be computed over
+```
+##### $$\hat{f}(8):$$
+##### Also printing out computational time which was best relative to other methods tested for creating the estimation kernel:
+```{r,echo=T}
+ptm <- proc.time()                                               # start computational timer
+sum(epanechnikov_estimate(8,x0,h))                                              # print out kernel estimate for x = 8      
+proc.time() - ptm
+```
+
+
+#### c)
+##### Plots for h=1,2,4:
+```{r,echo=T}
+kernel.estimate <- apply(epanechnikov_estimate(x,x0,h),2,sum)
+plot(x, kernel.estimate, type = "l", lwd=1,main="Epanechnikov kernel density estimate with bandwith set to 1") # plots the density estimate
+for (i in 1:length(x0)){              # to show the "baby" curves used to train the "mommy" epanechnikov estimate
+points(x, epanechnikov_estimate(x,x0,h)[i,], type = "l", lty =6,col="red")
+}
+```
+
+##### Plot when h = 2:
+##### This bandwidth produced the most reasonable results and the estimated plot is shown side-by-side with the R-density Epanechnikov default for comparison. 
+```{r out.width=c('500px', '300px'), fig.show='hold'}
+h <- 2
+kernel.estimate <- apply(epanechnikov_estimate(x,x0,h),2,sum)
+plot(x, kernel.estimate, type = "l", lwd=1,main="Epanechnikov kernel density estimate with bandwith set to 2") # plots the density estimate
+for (i in 1:length(x0)){              # to show the "baby" curves used to train the "mommy" epanechnikov estimate
+points(x, epanechnikov_estimate(x,x0,h)[i,], type = "l", lty =6,col="red")
+}
+
+plot(density(x0, bw=1, kernel = "epanechnikov"))       # Plotting the R-default for comparison to "homemade" density function
+```
+
+##### Plot when h = 4:
+```{r,echo=TRUE}
+h <- 4
+kernel.estimate <- apply(epanechnikov_estimate(x,x0,h),2,sum)
+plot(x, kernel.estimate, type = "l", lwd=1, main="Epanechnikov kernel density estimate with bandwith set to 4") # plots the density estimate
+for (i in 1:length(x0)){              # to show the "baby" curves used to train the "mommy" epanechnikov estimate
+points(x, epanechnikov_estimate(x,x0,h)[i,], type = "l", lty =6,col="red")
+}
+```
+
+
+
+## Problem 2: Submitted on handwritten paper
