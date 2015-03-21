@@ -1,0 +1,284 @@
+
+# PROBLEM 1
+
+```{r,echo=TRUE}
+# Start time to evaluate total runtime of code
+ptm = proc.time()
+
+# Function will return the approximation of pi along with the estimated variance
+h_x = function (u1,u2,n) {
+set.seed(315)        # set seed based off of clock time
+u1 = runif(n,-1,1)   # generate uniform variables between -1 and 1 to be used in x-axis
+set.seed(120)
+u2 = runif(n,-1,1)    # generate uniform variables between -1 and 1 to be used in y-axis
+   
+   
+mtrx = matrix(data=NA, nrow=n, ncol=n) 
+count = 0            # variable used to count random variables "points" that fall within circle
+temp.vector = vector()   # stores points that fall within the circle
+# two for loops evaluates n X n points to see if they fall within the circle
+for (i in 1:n){
+   for(j in 1:n) {
+      # check whether 2D points are within circle
+		if ( (sqrt((u1[i])^2 + (u2[j])^2) ) <= 1) {
+			count = count + 1
+         temp.vector[count] = sqrt((u1[i])^2 + (u2[j])^2)
+		} else {
+		}
+	}
+}
+
+# Variable estimation production   
+var = (1/(n*(n - 1)) ) * sum((temp.vector - count/(n^2))^2)
+est = count / (n^2) # calculation of estimate for pi
+return(c(est,var))
+}
+
+
+```
+
+Where $f_x = sqrt((u1[i])^2 + (u2[j])^2)$
+
+#### n = 100
+```{r,echo=TRUE}
+n = 100
+h.x = h_x(u1,u2,n) # returns estimate and estimated variance
+results <- matrix(c( pi/4,h.x[1],h.x[2]),ncol=3,byrow=TRUE)  # storing in matrix for better visual output
+colnames(results) <- c("True Value","Est Mu","Est Var")
+rownames(results) <- c("Results")
+results <- as.table(results)
+results
+```
+
+
+#### n = 1000
+#### Below output added another 20 minutes to my computation time. It's output is included in the html file, however I have commented it out for the grader.
+
+```{r,echo=TRUE}
+#n = 1000
+#h.x = h_x(u1,u2,n) # returns estimate and estimated variance
+#results <- matrix(c( pi/4,h.x[1],h.x[2]),ncol=3,byrow=TRUE)  # storing in matrix for better visual output
+#colnames(results) <- c("True Value","Est Mu","Est Var")
+#rownames(results) <- c("Results")
+#results <- as.table(results)
+# show estimate and variance
+#results
+```
+
+
+#### n = 10000
+#### Below output is suppressed because run time was over 1 1/2 hrs on my machine
+```{r,echo=TRUE}
+#n = 10000
+#h.x = h_x(u1,u2,n) # returns estimate and estimated variance
+#results <- matrix(c( pi/4,h.x[1],h.x[2]),ncol=3,byrow=TRUE)  # storing in matrix for better visual output
+#colnames(results) <- c("True Value","Est Mu","Est Var")
+#rownames(results) <- c("Results")
+#results <- as.table(results)
+#results
+```
+
+# PROBLEM 2
+#### a)
+
+```{r,echo=TRUE}
+#### Calculating R internal integration to find "true" value:
+
+# below function not part off assignment.
+f.x = function(x) {
+   value = (1/(1+x^2)*exp(-.5*(x - 5)^2))
+   return(value)
+   }
+true.value = integrate(f.x,-10,5)
+#######
+```
+
+```{r,echo=TRUE}
+# mu.cauch returns the estimated valuefor the definite integral along with its estimated variance
+mu.cauchy = function(n) {
+   # create a vector with bounds of the definite integral to be estimated
+   y = c(-10,5) 
+   # set seed based on clock time
+   set.seed(1231)  
+   # generate a sequence of random variables from the cauchy distribution
+   seq = rcauchy(n)
+   
+   # separate the random variables that fall within, inside and outside the bounds specified
+   x  = split(seq, findInterval(seq, y))
+   # separte only those random variables that fall within the bounds specified
+   x = as.numeric( unlist(x[2])  )
+   
+   # compute h function for values within bounds
+   h.x = pi * exp((-1/2) * ((x - 5)^2))
+   
+   # compute estimated value of definite integral
+   est.mu = sum(h.x) / n
+   # calculating estimated variance
+   var.est = (1/(n*(n - 1)) ) * sum((h.x - est.mu)^2)
+   
+   return(c(est.mu,var.est))
+}
+```
+
+##### n = 10^4
+```{r,echo=TRUE}
+options(scipen=999)  # prevents use of scientific notation
+n = 10^4         # set number of "darts" to be thrown
+cauchy.results4 = mu.cauchy(n) # prevent running mu.cuachy functions more than once
+results <- matrix(c(cauchy.results4[1],cauchy.results4[2]),ncol=2,byrow=TRUE)
+colnames(results) <- c("Mu","Var")
+rownames(results) <- c("Results")
+results <- as.table(results)
+results
+```
+ 
+##### n = 10^5
+```{r,echo=TRUE}
+n = 10^5
+cauchy.results5 = mu.cauchy(n)
+results <- matrix(c(cauchy.results5[1],cauchy.results5[2]),ncol=2,byrow=TRUE)
+colnames(results) <- c("Mu","Var")
+rownames(results) <- c("Results")
+results
+```
+ 
+##### n = 10^6
+```{r,echo=TRUE}
+n = 10^6
+cauchy.results6 = mu.cauchy(n)
+results <- matrix(c(cauchy.results6[1],cauchy.results6[2]),ncol=2,byrow=TRUE)
+colnames(results) <- c("Mu","Var")
+rownames(results) <- c("Results")
+results
+```
+
+##### n = 10^7
+```{r,echo=TRUE}
+n = 10^7
+cauchy.results7 = mu.cauchy(n)
+results <- matrix(c(cauchy.results7[1],cauchy.results7[2]),ncol=2,byrow=TRUE)
+colnames(results) <- c("Mu","Var")
+rownames(results) <- c("Results")
+results
+```
+
+##### n = 10^8
+```{r,echo=TRUE}
+n = 10^8
+cauchy.results8 = mu.cauchy(n)
+results <- matrix(c(cauchy.results8[1],cauchy.results8[2]),ncol=2,byrow=TRUE)
+colnames(results) <- c("Mu","Var")
+rownames(results) <- c("Results")
+results
+```
+
+
+#### (b)
+
+```{r,echo=TRUE}
+# mu.normal returns the estimated valuefor the definite integral along with its estimated variance
+mu.normal = function(n) {
+   # create a vector with bounds of the definite integral to be estimated
+   y = c(-10,5) 
+   # set seed based on clock time
+   set.seed(912)
+   # generate a sequence of random variables from the normal distribution
+   seq = rnorm(n,mean = 5, sd = 1)
+
+   # separate the random variables that fall within, inside and outside the bounds specified
+   x2  = split(seq, findInterval(seq, y))
+   # separte only those random variables that fall within the bounds specified
+   x2 = as.numeric( unlist(x2[1])  )
+   h.x = sqrt(2*pi) * 1/(1 + x2^2)
+   est.mu2 = sum(h.x) / n
+   # calculating estimated variance
+   var.est = (1/(n*(n - 1)) ) * sum((h.x - est.mu2)^2)
+   
+   return(c(est.mu2,var.est))
+}
+```
+
+##### n = 10^4
+```{r,echo=TRUE}
+n = 10^4
+normal.results4 = mu.normal(n)
+results <- matrix(c(normal.results4[1],normal.results4[2]),ncol=2,byrow=TRUE)
+colnames(results) <- c("Mu","Var")
+rownames(results) <- c("Results")
+results
+```
+
+##### n = 10^5
+```{r,echo=TRUE}
+n = 10^5
+normal.results5 = mu.normal(n)
+results <- matrix(c(normal.results5[1],normal.results5[2]),ncol=2,byrow=TRUE)
+colnames(results) <- c("Mu","Var")
+rownames(results) <- c("Results")
+results
+```
+
+##### n = 10^6
+```{r,echo=TRUE}
+n = 10^6
+normal.results6 = mu.normal(n)
+results <- matrix(c(normal.results6[1],normal.results6[2]),ncol=2,byrow=TRUE)
+colnames(results) <- c("Mu","Var")
+rownames(results) <- c("Results")
+results
+```
+
+##### n = 10^7
+```{r,echo=TRUE}
+n = 10^7
+normal.results7 = mu.normal(n)
+results <- matrix(c(normal.results7[1],normal.results7[2]),ncol=2,byrow=TRUE)
+colnames(results) <- c("Mu","Var")
+rownames(results) <- c("Results")
+results
+```
+
+##### n = 10^8
+```{r,echo=TRUE}
+n = 10^8
+normal.results8 = mu.normal(n)
+results <- matrix(c(normal.results8[1],normal.results8[2]),ncol=2,byrow=TRUE)
+colnames(results) <- c("Mu","Var")
+rownames(results) <- c("Results")
+results
+```
+
+
+#### (c)
+```{r,echo=TRUE}
+library(ggplot2)
+# set results from parts a) and b) into matrix
+df = matrix(c(normal.results4,normal.results5,normal.results6,normal.results7,normal.results8,cauchy.results4,cauchy.results5,cauchy.results6,cauchy.results7,cauchy.results8),ncol=2,byrow=TRUE)
+# convert df matrix into data frame in order to be handled by ggplot
+df = as.data.frame(df)
+colnames(df) = c("Mu","Var")
+# catagorize the data for separation in plots
+df$Method = c(rep("Normal",5),rep("Cauchy",5))
+# create column of random variable sizes generated to be plotted on x-axis
+df$number = rep(c(10^4,10^5,10^6,10^7,10^8))
+# add addtional column for standard error of estimated variances return by parts a) and b)
+df$se = sqrt(df$Var)
+
+
+
+# The errorbars overlapped, so use position_dodge to move them horizontally
+pd <- position_dodge(.1) # move them .05 to the left and right
+
+# plots points
+g = ggplot(df, aes(x= number, y=Mu, colour=Method, group=Method,ymax = max(Mu))) + geom_point(position=pd, size=3)
+# sets x-axis in log scale with appropriate breaks
+g = g + scale_x_log10(breaks=c(10^4,10^5,10^6,10^7,10^8)) 
+# plot lines between points and relable axis
+g = g + geom_line(position=pd) + labs(title = "Estimate Results",x="Value of Random Samples (in 10s)",y="Viewer's Rating")
+# plot error bars from standard errors
+g = g + geom_errorbar(aes(ymin=Mu - se, ymax = Mu + se), colour="black", width=.1, position=pd)
+g 
+
+# Total Code Run Time
+proc.time() - ptm
+```
