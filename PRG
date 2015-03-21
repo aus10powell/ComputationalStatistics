@@ -1,0 +1,140 @@
+
+# 1.1
+
+## 1.1 a)
+LCG with:
+```{r,echo=T}
+n=1000
+m=256
+a=57
+c=1
+seed=10
+
+lcg = function(n,m,a,c,seed, print=FALSE){
+  x = numeric(n)
+  x[1]=seed
+  for (i in 1:(n-1)){
+    x[i+1] = (a*x[i]+c)%%m 
+  }
+  x
+}
+
+head(lcg(n,m,a,c,seed),n=5)
+```
+
+## 1.1 b)
+
+```{r, echo=T}
+
+RCG1 = function(n,m,a,c,seed, print=FALSE){
+  x = numeric(n)
+  x[1]=seed
+  for (i in 1:(n-1)){
+    x[i+1] = (a*x[i]+c)%%m # note that x%%y finds x mod y
+  }
+  
+u = x/m
+}
+
+head(RCG1(n,m,a,c,seed),n=5)
+```
+
+## 1.1 c)
+
+```{r, echo=T}
+a2 = 25214903917
+c2 = 11
+m2 = 3*(10^14)
+
+RCG2 = function(n,m,a,c,seed, print=FALSE){
+  x = numeric(n)
+  x[1]=seed
+  for (i in 1:(n-1)){
+    x[i+1] = (a*x[i]+c)%%m # note that x%%y finds x mod y
+  }
+  
+u = x/m
+}
+
+head(RCG2(n,m2,a2,c2,seed),n=5)
+```
+
+## 1.1 d)
+
+```{r smallplot, fig.width=4, fig.height=4,echo=F}
+rcg1Values = RCG1(n,m,a,c,seed)
+rcg2Values = RCG2(n,m2,a2,c2,seed)
+u1 = RCG1(n,m,a,c,seed)
+u2 = RCG2(n,m2,a2,c2,seed)
+
+
+hist(rcg1Values,ylab ="Density",xlab="u",main="Histogram for RCG1")
+abline(h=100, col = "blue", lwd = 2)
+plot(u1[-1],u1[-n],main="Correlation between neighbors (RCG1)")
+acf(rcg1Values, main="Autocorreltation function for RCG1")
+
+hist(rcg2Values,ylab ="Density",xlab="u",main="Histogram for RCG2")
+abline(h=100, col = "blue", lwd = 2)
+plot(u2[-1],u2[-n],main="Correlation between neighbors (RCG2)")
+acf(rcg2Values, main="Autocorreltation function for RCG2")
+```
+
+The histograms plot for RCG1 seems to be pretty much what we would expect: more or less flat on the top. RCG2's histogram is not so good especially for n = 1000
+
+RCG1's correlation plot is very telling by the lined pattern that definitely makes RCG1 not a good canditate for being very random. RCG2's correlation plot is a good example of being random with no obvious patterns or gaps.
+
+The autocorrelation plots for both random generators raise a few concerns. Although there are 2 points (not counting the unnecessary 1 correlation) in the RCG1 histogram which pass over the blue dotted line. There are quite a few for RCG2 which pass over the dotted line which raise flags about its randomness.
+
+Although both RCG1 and RCG2 have plots that raise concerns, the most obvious candidate for definitely not being random might RCG1 because of the patterns in its correlation plot. Also, RCG2 has the non-flat histogram and so the quality for neither sequence seems to be good as far as randomness.
+
+# 2
+```{r,echo=TRUE}
+RNGkind("Super-Duper")
+n = 200                     # set size of uniform random sequence to be test (n > 10). Chose n = 200 to find in large-scale effects (such as a non-flat histogram)
+set.seed(33)                # chose a random seed point based off of the minute hand of the clock at the time of writing the code
+uniformRandom = runif(n)
+head(uniformRandom,n=5)       
+alpha = 0.5                 # specified interval lower bound
+beta = 1                   # specified interval lower bound
+
+##########################################################################################
+# Algorithm for utilizing the Gap Test
+##########################################################################################
+counter = 0                 # "counter" calculates the length for each gap not counting a success
+z = vector()                # "z is a vector that stores the gap lengths not counting a success
+for (i in 1:n) {  
+  if (alpha < uniformRandom[i] &  uniformRandom[i] <= beta) {      # checks to see if a value from the Super-Duper sequence falls within the given interval
+    z = c(z,counter)           # if the value from the interval falls within the given interval, then z gets the number of steps until that point
+    counter = 0               # "counter" is reset
+  } else {
+    counter = (counter + 1)   # if value from the interval does not fall within the given interval, then the counter iterates
+  }
+}
+z      # counts number of stops up to a success (not counting the success itself)
+table(z) # sets the z in a frequency table
+##########################################################################################
+
+
+##########################################################################################
+# code used to find the expected values of z based on the geometric distribution
+##########################################################################################
+expected = vector()           # initializing the "expected" variable
+for(i in 0:(n-1)){            # for loop calculating the expected number of gaps based off of the geometric sequence
+  expected = c(expected,dgeom(i,(beta-alpha)))  
+}
+##########################################################################################
+
+observed = as.vector(table(z))          # extracts counts of z occurances as a vector
+observed <- c(observed, rep(0, length(expected) - length(observed)))   # fills length of observed vector with 0s to match exptected values for that length of random uniform
+sum(((observed-(n*expected))^2)/(n*expected))   # calculates the chi-squared value
+
+```
+
+
+$H_0:$ The uniform random sequence is random    
+
+$H_a:$ The uniform random sequence is not random
+
+Test statistic: $\chi^2_{\alpha,df}$
+
+For a uniform, randomly generated sequence using the "Super-Duper" method of size n = 200 a $\chi^2_{critical}$ value of 51.1 was obtained. Since $\chi^2_{critical} = 51.1 < \chi^2_{0.05,199}= 232.91$, we fail to reject the that the uniform random sequence is random.
