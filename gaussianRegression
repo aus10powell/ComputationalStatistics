@@ -1,0 +1,239 @@
+
+
+```{r,echo=TRUE}
+library(ggplot2)
+library(MASS)
+library(scales)
+fileurl <- "http://www.math.sjsu.edu/~bremer/Teaching/Math267/Data/Movies.txt"
+movie_data = read.table(fileurl,header=T)
+head(movie_data)
+
+# changing scale of Budget in order to match the graph given in assignment
+movie_data$budget = movie_data$budget/1000
+
+# tell ggplot where data comes from and what goes on x and y axis
+   g = ggplot(data = movie_data, aes(x=budget,y=rating))  
+# color data by year and separate into three different graphs by type of movie
+   g = g + geom_point(aes(colour = factor(year))) + facet_grid(.~Type)
+# label axis and draw a linear model of data with confidence band
+   g = g + labs(title = "Successful Movies",x="Movie Budget (in $k)",y="Viewer's Rating") + geom_smooth(method="lm") 
+# scale x-axis on log scale
+   g = g + scale_x_log10() 
+# treat year variable as a discrete variable rather than a continous one   
+   g +  scale_color_discrete(name ="Year") 
+
+```
+
+# PROBLEM 2
+#### (a)
+```{r,echo=TRUE}
+# set intrinsic variance of the system
+   var.f = 0.25   
+# set number of randomly generate x-values
+   n = 100        
+# generate 2 sets of random uniform sequences
+# seed set randomly from looking at clock
+   set.seed(507) 
+   U1 = runif(n)
+   set.seed(527) 
+   U2 = runif(n)
+# Utilize values from a unit circle to generate x-values from a sine function
+## S is the squared distance from the origin for a unit circle and U1 and U2 are coordinates of a point randomly
+## selected from the interior of the unit circle
+   S = U1^2 + U2^2  
+# where sin(T) = U1 / sqrt(S)
+   T = atan((U2 / U1)) 
+# Create n random x values (in radians) for sin from 0 to 2*pi
+   sine_domain = 4 *  asin(U1 / sqrt(S)) 
+   epsilon = rnorm(n,0,var.f)    # error term
+   y = sin(sine_domain) + epsilon  # model to be used in part b)
+
+```
+
+##### 100 random x-values uniformly distributed over the interval [0, 2π]
+```{r,echo=T}
+sine_domain
+```
+
+##### Corresponding y-values using intrinsic variance = 0.25 demonstrating "randomness" (pertinent although not necessary to assignment)
+
+```{r smallplot, fig.width=4, fig.height=4,echo=F}
+hist(sine_domain)
+abline(h=100, col = "blue", lwd = 2)
+plot(sine_domain[-1],sine_domain[-n],main="Correlation between neighbors")
+acf(sine_domain, main="Autocorreltation function")
+# generating cooresponding y-values with intrinsic variance, s.f
+plot(sine_domain,sin(y),main="Plot of Random Sine with Intrinsic Var",xlab="x", pch=19) 
+```
+
+#### (b)
+
+```{r,echo=TRUE}
+
+h = 1
+var.f = 0.25
+var.n = 1
+
+```
+
+
+```{r, echo= TRUE}
+
+# function returns expected value of the response at input point x∗ and the variance of the posterior distribution of the response 
+response.value <- function(x.star, h, var.f, var.n){
+   # distance matrix for observations x
+      D <- as.matrix(dist(x, diag=T, upper=T)) 
+   # The matrix resulting from applying the kernel function to pairs of input points.
+      Sigma <- (var.f)^2*exp(-0.5*D^2/h^2)
+   # The kernel applied to pairs of observed points xi and the point x∗ 
+      Sigma.x <- (var.f)^2*exp(-0.5*(x-x.star)^2/h^2) 
+   # expected value of the response at input point x∗
+      f.star <- t(Sigma.x)%*%solve(Sigma+(var.n)^2*diag(length(x)))%*%y
+  # variance of the posterior distribution of the response
+      f.star.var <- (var.f)^2 - t(Sigma.x)%*%solve(Sigma+(var.n)^2*diag(length(x)))%*%Sigma.x
+      return(c(f.star, f.star.var))
+}
+
+```
+
+##### Printing arbitrary expected value and variance of demo_x in the interval [0, 2π].
+
+```{r,echo=TRUE}
+
+demo_x = 2*pi
+response.value(demo_x,h,var.f,var.n)[1]
+response.value(demo_x,h,var.f,var.n)[2]
+
+```
+
+#### (c) 
+##### The true function that generated the simulted data (in red using dots in order to not eclipse estimate function) over the interval [0, 2π].
+##### The data from (a) (as black dots)
+##### Arbitrary choice of h = 1, var.f = 0.25, var.n = 1
+```{r,echo=TRUE}
+
+
+# make sure the response surface is stored appropriately
+   response.surface <- Vectorize(response.value, c("x.star")) 
+# create a sequence of values that will act as seed sites for the response.value fxn
+   x.seq <- seq(min(x), max(x),0.01)   
+
+# turns sine_domain values to be stored as matrix
+   x = matrix(sine_domain,nrow=length(sine_domain),ncol=1) 
+# turns y-values for sine_domain values to be stored as matrix
+   y = matrix(sin(sine_domain) + epsilon ,nrow=length(sine_domain),ncol=1)  
+# stores the f.star values from given inputes
+   y.seq <- response.surface(x.seq,h,var.f,var.n)[1,] # large bandwidth
+# stores the var.star values from given inputes
+   y.var <- response.surface(x.seq,h,var.f,var.n)[2,]
+# create upper bound for grey confidence band
+   y.upper <- y.seq + 1.96*sqrt(y.var)
+# create lower bound for grey confidence band
+   y.lower <- y.seq - 1.96*sqrt(y.var)
+# plots scatterplot of data generated from model
+   plot(x,y, pch = 18, main = "Plot of True Function with h = 1, var.f = 0.4 and var.n = 0.70",xlab="x (in radians)")
+# colors grey confidence band
+   polygon(c(x.seq, rev(x.seq)), c(y.lower, rev(y.upper)), col = "grey85", border = NA)
+# redraws data points from model that were covered over by the confidence band
+   points(x,y, pch = 18)
+# draws estimated function from Gaussian process
+   points(x.seq, y.seq, type = "l", col = "black", lwd = 2)
+# plots functions values from a true sine curve
+   points(sine_domain, sin(sine_domain), col = "red", lwd = 1,pch=19)
+
+```
+
+
+#### (d)
+##### Explain what you are looking for in the graph to identify a “good” set of parameters.
+###### In looking for a good set of parameters:
+
+* I'm looking for a the estimated response curve (in black) to follow the true function (in red) reasonably close.
+* The 95% confidence region of the response surface (the grey band) to encompase most of the true data (in red).
+
+###### The first attempt with h = 1, var.f = 0.25, var.n = 1 was pretty good. 
+###### A few things that help narrow down optimizing the curve:
+
+** Playing around with the different parameters, it seems like one of the most imporatant factors for satisfying the above points is having var.n (intrinsic variance) be very close to var.f (variance of the kernel). 
+
+** h = 1 seems to be approximation to optimizing the above criteria: anything lower and the estimated response curve gets to "jumpy", anything above and it starts to flatten out.
+
+** Keeping var.n above 0.5 helps the grey band stretch out enough
+ 
+
+
+```{r,echo=TRUE}
+
+h = 1
+var.f = 0.4
+var.n = 0.70
+
+```
+
+
+
+```{r,echo=FALSE}
+
+# generate 2 sets of random uniform sequences
+set.seed(507) # seed set randomly from looking at clock
+U1 = runif(n)
+set.seed(527) 
+U2 = runif(n)
+# Utilize values from a unit circle to generate x-values from a sine function
+## S is the squared distance from the origin for a unit circle and U1 and U2 are coordinates of a point randomly
+## selected from the interior of the unit circle
+S = U1^2 + U2^2  
+T = atan((U2 / U1)) # where sin(T) = U1 / sqrt(S)
+# Create n random x values (in radians) for sin from 0 to 2*pi
+sine_domain = 4 *  asin(U1 / sqrt(S)) 
+epsilon = rnorm(n,0,var.f)    # error term
+y = sin(sine_domain) + epsilon  # model to be used in part b)
+
+# turn sine_domain values to be stored as matrix
+x = matrix(sine_domain,nrow=length(sine_domain),ncol=1) 
+# turns y-values for sine_domain values to be stored as matrix
+y =  matrix(sin(sine_domain) + epsilon,nrow=length(sine_domain),ncol=1) 
+
+# function returns expected value of the response at input point x∗ and the variance of the posterior distribution of the response 
+response.value <- function(x.star, h, var.f, var.n){
+   # distance matrix for observations x
+      D <- as.matrix(dist(x, diag=T, upper=T)) 
+   # The matrix resulting from applying the kernel function to pairs of input points.
+      Sigma <- (var.f)^2*exp(-0.5*D^2/h^2)
+   # The kernel applied to pairs of observed points xi and the point x∗ 
+      Sigma.x <- (var.f)^2*exp(-0.5*(x-x.star)^2/h^2) 
+   # expected value of the response at input point x∗
+      f.star <- t(Sigma.x)%*%solve(Sigma+(var.n)^2*diag(length(x)))%*%y
+  # variance of the posterior distribution of the response
+      f.star.var <- (var.f)^2 - t(Sigma.x)%*%solve(Sigma+(var.n)^2*diag(length(x)))%*%Sigma.x
+      return(c(f.star, f.star.var))
+}
+
+# make sure the response surface is stored appropriately
+   response.surface <- Vectorize(response.value, c("x.star")) 
+# create a sequence of values that will act as seed sites for the response.value fxn
+   x.seq <- seq(min(x), max(x),0.01)   
+# Making sure y-values from data generated from model are stored in matrix form
+   y = matrix(sin(sine_domain) + epsilon ,nrow=length(sine_domain),ncol=1)  
+# stores the f.star values from given inputes
+   y.seq <- response.surface(x.seq,h,var.f,var.n)[1,] # large bandwidth
+# stores the var.star values from given inputes
+   y.var <- response.surface(x.seq,h,var.f,var.n)[2,]
+# create upper bound for grey confidence band
+   y.upper <- y.seq + 1.96*sqrt(y.var)
+# create lower bound for grey confidence band
+   y.lower <- y.seq - 1.96*sqrt(y.var)
+# plots scatterplot of data generated from model
+   plot(x,y, pch = 18, main = "Plot of True Function with h = 1, var.f = 0.4 and var.n = 0.70",xlab="x (in radians)")
+# colors grey confidence band
+   polygon(c(x.seq, rev(x.seq)), c(y.lower, rev(y.upper)), col = "grey85", border = NA)
+# redraws data points from model that were covered over by the confidence band
+   points(x,y, pch = 18)
+# draws estimated function from Gaussian process
+   points(x.seq, y.seq, type = "l", col = "black", lwd = 2)
+# plots functions values from a true sine curve
+   points(sine_domain, sin(sine_domain), col = "red", lwd = 1,pch=19)
+
+```
+
+
