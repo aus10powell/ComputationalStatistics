@@ -1,0 +1,58 @@
+# xi is a vector of number each representing the number of heads in 10 coin flips (for one coin)
+xi = read.table(fileurl,header=TRUE)
+xi = xi$x   # extract xi from data frame into integer
+########################################
+##### Variables ########################
+########################################
+# xi = input data
+# coin1 = probability of coin1 being flipped
+# coin2 = 1 - coin1
+# p1 = probability of getting heads with Coin1
+# p2 = probability of getting tails with Coin2
+########################################
+
+### T_i: Calculates and returns the probability of getting coin1 given the data and current parameters
+T_i = function(xi,coin1,p1,p2){
+	((coin1 * dbinom(xi,10,p1)) / (coin1 * dbinom(xi,10,p1) + (1-coin1)*dbinom(xi,10,p2)))
+}
+
+
+### Q_i: Calculates and returns the maximum of P(coin1), p1, p2
+Q_i = function(xi,T_i){
+	# calculates the maximum estimate for the probability of choosing to flip coin1
+	coin1 = mean(T_i)  
+	# calculates the maximum estimate for the probability of a coin1 flip being heads  
+	p1 = sum((xi / 10) * T_i) / sum(T_i)
+	# calculates the maximum estimate for the probability of a coin2 flip being heads  
+	p2 = sum((xi / 10) * (1 - T_i)) / sum(1 - T_i)
+	
+	return(list(coin1,p1,p2))
+}
+
+
+# Initial guess for probability of coin1 being flipped, and heads for p1 and p2
+coin1 = 0.5; p1 = 0.2; p2 = 0.9
+for (i in 1:100) {   
+coin1_temp =  as.numeric( Q_i(xi,T_i(xi,coin1,p1,p2))[1] )
+p1_temp =  as.numeric( Q_i(xi,T_i(xi,coin1,p1,p2))[2] )
+p2_temp = as.numeric(Q_i(xi,T_i(xi,coin1,p1,p2))[3])
+
+coin1 = as.numeric( Q_i(xi,T_i(xi,coin1_temp,p1,p2))[1] )
+p1 =  as.numeric(Q_i(xi,T_i(xi,coin1,p1_temp,p2_temp))[2])
+p2 = as.numeric(Q_i(xi,T_i(xi,coin1,p1_temp,p2_temp))[3])
+}
+c("coin1",coin1);c("p1",p1);c("p2",p2)
+# Different initial guess for p1 and p2:
+coin1 = 0.5; p1 = 0.9; p2 = 0.2
+for (i in 1:100) {   
+# Maximizes the estimates for the previous estimate and stores as temporary variable 
+# to be used in next maximization
+coin1_temp =  as.numeric( Q_i(xi,T_i(xi,coin1,p1,p2))[1] )
+p1_temp =  as.numeric( Q_i(xi,T_i(xi,coin1,p1,p2))[2] )
+p2_temp = as.numeric(Q_i(xi,T_i(xi,coin1,p1,p2))[3])
+# Next maximization receives previous estimates
+coin1 = as.numeric( Q_i(xi,T_i(xi,coin1_temp,p1,p2))[1] )
+p1 =  as.numeric(Q_i(xi,T_i(xi,coin1,p1_temp,p2_temp))[2])
+p2 = as.numeric(Q_i(xi,T_i(xi,coin1,p1_temp,p2_temp))[3])
+}
+c("coin1",coin1);c("p1",p1);c("p2",p2)
